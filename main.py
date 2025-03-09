@@ -1,6 +1,9 @@
 import discord
 from discord.ext import commands
 from google import genai
+import urllib.request
+import requests
+from google.genai import types
 import json
 
 with open('./config.json', 'r') as file:
@@ -58,6 +61,9 @@ async def terminate(ctx, *args):
   
 @bot.event
 async def on_message(message):
+    # if message.author != bot.user: 
+    #     print(f"message.attchments:{message.attachments}")
+    # return
     if message.author == bot.user or (not message.content.startswith("$") and message.author.id not in dict_chat_started) or not message.content:
         return
     if message.content.startswith("$"):
@@ -71,8 +77,16 @@ async def on_message(message):
         await message.channel.reply(f"{message.author.mention} you can only use this command in the chat-bot-test channel")
     else:
         if message.author.id in dict_chat_started:
-            response = dict_chat_started[message.author.id].send_message(message.content)
-            await message.reply(response.text)
+            if message.attachments:
+                contents = [message.content]
+                for attachment in message.attachments:
+                    image = requests.get(attachment.url)
+                    contents.append(types.Part.from_bytes(data=image.content, mime_type=attachment.content_type))
+                response = dict_chat_started[message.author.id].send_message(contents)
+                await message.reply(response.text)
+            else:
+                response = dict_chat_started[message.author.id].send_message(message.content)
+                await message.reply(response.text)
         else:
             await message.reply(f"{message.author.mention} you haven't started a conversation. use $start to start the chat")
     await bot.process_commands(message) 
